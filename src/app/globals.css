@@ -1,0 +1,290 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #000;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Simplified background for better performance */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+  will-change: auto;
+}
+
+/* Performance-optimized animations */
+* {
+  transition-property: opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Disable expensive properties on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+  }
+  
+  /* BUT allow Spline animations to work */
+  spline-viewer, spline-viewer * {
+    animation: initial !important;
+    transition: initial !important;
+  }
+}
+
+/* Only disable heavy CSS on very low-end mobile devices */
+@media (max-width: 480px) and (max-height: 640px) {
+  body[data-low-end="true"] *, 
+  body[data-low-end="true"] *::before, 
+  body[data-low-end="true"] *::after {
+    backdrop-filter: none !important;
+    filter: none !important;
+  }
+  
+  body[data-low-end="true"]::before {
+    display: none;
+  }
+}
+
+/* Preserve header hover transforms on all devices */
+header *, header *::before, header *::after {
+  transform: initial !important;
+  transition: transform 0.3s ease, color 0.3s ease !important;
+}
+
+/* Emergency performance mode */
+.emergency-performance *, 
+.emergency-performance *::before, 
+.emergency-performance *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+}
+
+/* Preserve header hover in emergency mode */
+.emergency-performance header *, 
+.emergency-performance header *::before, 
+.emergency-performance header *::after {
+  transform: initial !important;
+  transition: transform 0.3s ease, color 0.3s ease !important;
+}
+
+/* ALWAYS allow Cover component animations to work */
+.group\/cover,
+.group\/cover *,
+.group\/cover *::before,
+.group\/cover *::after {
+  animation: initial !important;
+  transition: initial !important;
+  transform: initial !important;
+}
+
+/* Ensure Framer Motion animations work in Cover component */
+.group\/cover [data-framer-motion-element],
+.group\/cover [data-framer-motion-element] * {
+  animation: initial !important;
+  transition: initial !important;
+  transform: initial !important;
+}
+
+/* CRITICAL: Cover component zoom effect - override ALL other rules */
+.cover-zoom-container {
+  transform-origin: center !important;
+  will-change: transform !important;
+  display: inline-block !important;
+}
+
+.cover-zoom-text {
+  transform-origin: center center !important;
+  will-change: transform !important;
+  display: inline-block !important;
+  transition: transform 2.5s ease-out !important;
+}
+
+/* Force Cover component zoom to work in ALL scenarios */
+.cover-zoom-container:hover .cover-zoom-text,
+.cover-zoom-container.hover .cover-zoom-text {
+  transform: scale(0.8) !important;
+  transition: transform 2.5s ease-out !important;
+}
+
+
+
+/* Ensure Cover component hover states work */
+.group\/cover:hover .group-hover\/cover\:text-white {
+  color: white !important;
+}
+
+.group\/cover:hover .group-hover\/cover\:hidden {
+  display: none !important;
+}
+
+.group\/cover:hover .group-hover\/cover\:opacity-100 {
+  opacity: 1 !important;
+}
+
+.group\/cover:hover .group-hover\/cover\:bg-white {
+  background-color: white !important;
+}
+
+/* Force enable Cover component animations even in emergency mode */
+.emergency-performance .group\/cover,
+.emergency-performance .group\/cover *,
+.emergency-performance .group\/cover *::before,
+.emergency-performance .group\/cover *::after {
+  animation: initial !important;
+  transition: initial !important;
+  transform: initial !important;
+}
+
+/* Ensure Cover component background changes work */
+.group\/cover.hover\:bg-neutral-900:hover {
+  background-color: rgb(38, 38, 38) !important;
+}
+
+/* Ensure Cover component scale animations are visible */
+.group\/cover span {
+  transform-origin: center !important;
+  display: inline-block !important;
+  will-change: transform !important;
+}
+
+/* Force enable transform animations for Cover component */
+.group\/cover [data-framer-motion-element] {
+  transform: initial !important;
+  will-change: transform !important;
+}
+
+/* Always allow animations on portfolio page */
+body[data-portfolio-page="true"] *,
+body[data-portfolio-page="true"] *::before,
+body[data-portfolio-page="true"] *::after {
+  animation: initial !important;
+  transition: initial !important;
+  transform: initial !important;
+}
+
+/* Optimize heavy gradients */
+.emergency-performance .bg-gradient-to-br,
+.emergency-performance .bg-gradient-to-r {
+  background: #1a1a1a !important;
+}
+
+/* Hide Spline watermark/logo (robust selector) */
+div:has(> iframe[src*="spline.design"]) + div,
+div:has(> iframe[src*="spline.design"]) ~ div,
+iframe[src*="spline.design"] + div,
+iframe[src*="spline.design"] ~ div {
+  display: none !important;
+}
+
+/* Optimized button styles */
+.glow-btn {
+  position: relative;
+  z-index: 1;
+  background: #111;
+  color: #fff;
+  border-radius: 0.75rem;
+  border: 1.5px solid #fff;
+  overflow: hidden;
+  transition: background 0.2s ease;
+  will-change: background;
+}
+
+/* Performance-conscious hover effects */
+@media (hover: hover) and (pointer: fine) {
+  .glow-btn:hover {
+    background: #222;
+  }
+  
+  .group:hover .group-hover\:scale-110 {
+    transform: scale(1.05);
+  }
+}
+
+/* Critical: Header hover effect restoration */
+/* Ensure Tailwind group hover classes work */
+.scale-x-0 {
+  transform: scaleX(0) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform-origin: left !important;
+}
+
+.group:hover .scale-x-0 {
+  transform: scaleX(0) !important;
+}
+
+.group-hover\:scale-x-100 {
+  transform: scaleX(0) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform-origin: left !important;
+}
+
+.group:hover .group-hover\:scale-x-100 {
+  transform: scaleX(1) !important;
+}
+
+.group-hover\:text-black {
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.group:hover .group-hover\:text-black {
+  color: #000000 !important;
+}
+
+/* Reduce motion for accessibility and performance */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* GPU acceleration for critical elements only */
+.spline-container,
+.hero-content {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Optimize text rendering */
+.text-optimize {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+/* Contain layout shifts */
+.layout-contain {
+  contain: layout style paint;
+}
+
+/* Improve scroll performance */
+.scroll-optimize {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
