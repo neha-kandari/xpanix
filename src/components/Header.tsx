@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Moon } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useAuthUser } from "../../hooks/useAuthUser";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
