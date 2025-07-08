@@ -31,7 +31,7 @@ export const HeroParallax = ({
     window.scrollTo({ top: 0, behavior: 'instant' });
     
     // Force a reflow to ensure scroll is properly reset
-    document.body.offsetHeight;
+    void document.body.offsetHeight;
     
     // Small delay to ensure DOM is ready and scroll is reset
     const timer = setTimeout(() => {
