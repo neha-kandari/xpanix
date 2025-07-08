@@ -16,7 +16,7 @@ export default function Contact() {
               Skip the Middlemen – Talk Directly to the Developer!
             </h2>
             <p className="text-gray-400 text-base md:text-lg max-w-4xl mx-auto leading-relaxed">
-              We believe in clear, fast, and honest communication. That's why when you reach out to us, you won't be passed through layers of sales person and managers.
+              We believe in clear, fast, and honest communication. That&apos;s why when you reach out to us, you won&apos;t be passed through layers of sales person and managers.
             </p>
           </div>
 
