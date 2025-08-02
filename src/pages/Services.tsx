@@ -38,13 +38,15 @@ export default function Services() {
       <div className="relative w-full">
         {/* Mobile view - Spline background with overlaid cards */}
         <div className="md:hidden relative">
-          {/* Spline Animation - Top portion */}
-          <div className="absolute top-0 left-0 right-0 h-[300px] z-10 flex items-center justify-center">
-            <ServiceSpline />
+          {/* Spline Animation - Top portion with better sizing */}
+          <div className="absolute top-0 left-0 right-0 h-[220px] xs:h-[250px] sm:h-[300px] z-10 flex items-center justify-center overflow-hidden">
+            <div className="w-full h-full relative bg-transparent">
+              <ServiceSpline />
+            </div>
           </div>
           
           {/* Service Cards - Below Spline animation with proper spacing */}
-          <div className="relative z-20 flex flex-col items-center gap-4 px-4 pb-10 pt-[220px] pointer-events-none">
+          <div className="relative z-20 flex flex-col items-center gap-4 px-4 pb-10 pt-[160px] xs:pt-[180px] sm:pt-[220px] pointer-events-none">
             <ServiceCard 
               title="APP DEVELOPMENT" 
               description="We develop modern apps with tech that can help your business grow" 
