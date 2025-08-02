@@ -5,9 +5,8 @@ import { Application } from '@splinetool/runtime';
 
 export default function ServiceSpline() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const splineAppRef = useRef<Application | null>(null);
   const animationRef = useRef<number>(0);
-
+  const splineAppRef = useRef<Application | null>(null);
   const [sceneLoaded, setSceneLoaded] = useState(false);
 
   useEffect(() => {
@@ -15,15 +14,17 @@ export default function ServiceSpline() {
 
     const container = containerRef.current;
 
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
     const isLowTier = () => {
       const mem = (navigator as any).deviceMemory || 4;
       const cores = navigator.hardwareConcurrency || 4;
       return mem <= 2 || cores <= 2;
     };
-    const lowTier = isLowTier();
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const lowTier = isLowTier();
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
@@ -36,8 +37,8 @@ export default function ServiceSpline() {
       -10000,
       10000
     );
-    camera.position.set(980.99, 179.96, 196.84);
-    camera.quaternion.setFromEuler(new THREE.Euler(-0.64, 1.33, 0.63));
+    camera.position.set(0, 0, 1000);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !lowTier });
     renderer.setPixelRatio(lowTier ? 1 : Math.min(window.devicePixelRatio, 1.5));
@@ -45,14 +46,11 @@ export default function ServiceSpline() {
     renderer.shadowMap.enabled = !lowTier;
     renderer.shadowMap.type = THREE.PCFShadowMap;
 
-    renderer.domElement.style.touchAction = 'pan-y';
-    renderer.domElement.style.pointerEvents = 'auto';
-    renderer.domElement.style.userSelect = 'none';
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = lowTier ? 0.05 : 0.1;
+    controls.dampingFactor = 0.1;
     controls.enableZoom = false;
     controls.enablePan = false;
     controls.enableRotate = true;
@@ -61,7 +59,13 @@ export default function ServiceSpline() {
     controls.maxAzimuthAngle = Math.PI / 6;
     controls.minAzimuthAngle = -Math.PI / 6;
 
-    const animate = (time = 0) => {
+    // Reduce damping on mobile to prevent drift
+    if (isMobile) {
+      controls.dampingFactor = 0.05;
+      controls.rotateSpeed = 0.3;
+    }
+
+    const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
@@ -71,48 +75,71 @@ export default function ServiceSpline() {
     const onResize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
-      renderer.setSize(w, h);
       camera.left = -w / 2;
       camera.right = w / 2;
       camera.top = h / 2;
       camera.bottom = -h / 2;
       camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
     };
+
     window.addEventListener('resize', onResize);
+
+    const centerCameraToScene = () => {
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+
+      if (size.length() === 0 || isNaN(center.x)) {
+        // Retry after short delay if scene is not ready
+        setTimeout(centerCameraToScene, 150);
+        return;
+      }
+
+      const scale = Math.max(size.x / width, size.y / height) * 1.2;
+      camera.zoom = 1 / scale;
+      camera.position.set(center.x, center.y, center.z + 1000);
+      camera.lookAt(center);
+      controls.target.copy(center);
+      camera.updateProjectionMatrix();
+      controls.update();
+
+      // Lock controls target on mobile to prevent drift
+      if (isMobile) {
+        controls.saveState();
+      }
+    };
 
     const loadScene = () => {
       const app = new Application(renderer.domElement);
       splineAppRef.current = app;
-      app.load('https://prod.spline.design/0HhtDF4IAOrdc6FJ/scene.splinecode')
+      app
+        .load('https://prod.spline.design/0HhtDF4IAOrdc6FJ/scene.splinecode')
         .then(() => {
           setSceneLoaded(true);
-          // Center camera
-                     setTimeout(() => {
-             scene.updateMatrixWorld(true);
-             const box = new THREE.Box3().setFromObject(scene);
-             const center = box.getCenter(new THREE.Vector3());
-             const size = box.getSize(new THREE.Vector3());
-             const maxDim = Math.max(size.x, size.y, size.z);
-             // For orthographic camera, adjust zoom based on scene size
-             const scale = Math.max(size.x / width, size.y / height) * 1.2;
-             camera.zoom = 1 / scale;
-             camera.position.set(center.x, center.y, center.z + 1000);
-             camera.lookAt(center);
-             controls.target.copy(center);
-             camera.updateProjectionMatrix();
-             controls.update();
-           }, 100);
+          setTimeout(centerCameraToScene, 100);
+          
+          // Disable Spline app pointer events on mobile to prevent conflicts
+          if (isMobile && app.canvas) {
+            app.canvas.style.pointerEvents = 'none';
+          }
         })
         .catch(console.error);
     };
 
-    if ('requestIdleCallback' in window) requestIdleCallback(loadScene);
-    else setTimeout(loadScene, 300);
+    // Idle loading fallback
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(loadScene);
+    } else {
+      setTimeout(loadScene, 300);
+    }
 
     return () => {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', onResize);
       splineAppRef.current?.dispose();
+      controls.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
@@ -121,18 +148,20 @@ export default function ServiceSpline() {
   return (
     <>
       {!sceneLoaded && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: '#000',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'sans-serif',
-          fontSize: '1rem',
-          zIndex: 99
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: '#000',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'sans-serif',
+            fontSize: '1rem',
+            zIndex: 99,
+          }}
+        >
           Loading…
         </div>
       )}
