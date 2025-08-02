@@ -8,7 +8,6 @@ import useContactPopup from './hooks/useContactPopup'
 
 // Pages
 import Home from './pages/Home'
-import About from './pages/About'
 import Services from './pages/Services'
 import WebDevelopment from './pages/WebDevelopment'
 import AppDevelopment from './pages/AppDevelopment'
@@ -35,7 +34,6 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/web-development" element={<WebDevelopment />} />
           <Route path="/app-development" element={<AppDevelopment />} />
