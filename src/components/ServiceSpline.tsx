@@ -19,6 +19,7 @@ export default function ServiceSpline() {
       const cores = navigator.hardwareConcurrency || 4;
       return mem <= 2 || cores <= 2;
     };
+
     const lowTier = isLowTier();
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
@@ -28,7 +29,6 @@ export default function ServiceSpline() {
     const scene = new THREE.Scene();
     scene.background = null;
 
-    // Mobile-optimized camera settings
     const camera = new THREE.OrthographicCamera(
       -width / 2,
       width / 2,
@@ -37,8 +37,7 @@ export default function ServiceSpline() {
       -10000,
       10000
     );
-    
-    // Different camera positions for mobile vs desktop
+
     if (isMobile) {
       camera.position.set(500, 200, 300);
       camera.quaternion.setFromEuler(new THREE.Euler(-0.3, 0.8, 0.2));
@@ -47,15 +46,14 @@ export default function ServiceSpline() {
       camera.quaternion.setFromEuler(new THREE.Euler(-0.64, 1.33, 0.63));
     }
 
-    const renderer = new THREE.WebGLRenderer({ 
-      alpha: true, 
-      antialias: !lowTier && !isMobile, 
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: !lowTier && !isMobile,
       powerPreference: isMobile ? 'low-power' : 'high-performance',
       stencil: false,
       depth: true
     });
-    
-    // Mobile-optimized pixel ratio
+
     const pixelRatio = isMobile ? 1 : (lowTier ? 1 : Math.min(window.devicePixelRatio, 1.5));
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
@@ -67,7 +65,6 @@ export default function ServiceSpline() {
     renderer.domElement.style.userSelect = 'none';
     container.appendChild(renderer.domElement);
 
-    // Controls setup - disabled completely on mobile to prevent drift
     let controls: OrbitControls | null = null;
     if (!isMobile) {
       controls = new OrbitControls(camera, renderer.domElement);
@@ -83,24 +80,15 @@ export default function ServiceSpline() {
       controls.rotateSpeed = 0.5;
     }
 
-    // Mobile-optimized animation loop with frame limiting
     let lastFrameTime = 0;
     const targetFPS = isMobile ? 30 : 60;
     const frameInterval = 1000 / targetFPS;
-    
+
     const animate = (currentTime: number) => {
       animationRef.current = requestAnimationFrame(animate);
-      
-      // Frame rate limiting for mobile
-      if (isMobile && currentTime - lastFrameTime < frameInterval) {
-        return;
-      }
+      if (isMobile && currentTime - lastFrameTime < frameInterval) return;
       lastFrameTime = currentTime;
-      
-      // Only update controls if they exist (desktop only)
-      if (controls) {
-        controls.update();
-      }
+      if (controls) controls.update();
       renderer.render(scene, camera);
     };
     animate(0);
@@ -117,7 +105,6 @@ export default function ServiceSpline() {
     };
     window.addEventListener('resize', onResize);
 
-    // Store initial camera state for mobile stability
     let initialCameraPosition: THREE.Vector3 | null = null;
     let initialCameraTarget: THREE.Vector3 | null = null;
 
@@ -128,47 +115,35 @@ export default function ServiceSpline() {
         .then(() => {
           setSceneLoaded(true);
           setTimeout(() => {
-            scene.updateMatrixWorld(true);
             const box = new THREE.Box3().setFromObject(scene);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
-            
-            // Mobile-specific scaling and positioning
+
             if (isMobile) {
               const scale = Math.max(size.x / width, size.y / height) * 1.8;
               camera.zoom = 1 / scale;
-              
-              // Set stable camera position for mobile
-              const targetPosition = new THREE.Vector3(center.x + 200, center.y + 100, center.z + 800);
-              camera.position.copy(targetPosition);
-              camera.lookAt(center.x, center.y, center.z);
-              
-              // Store stable positions to prevent drift
-              initialCameraPosition = targetPosition.clone();
-              initialCameraTarget = new THREE.Vector3(center.x, center.y, center.z);
-              
-              // Disable any Spline app controls on mobile
-              if (app.canvas) {
-                app.canvas.style.pointerEvents = 'none';
-              }
+              camera.updateProjectionMatrix();
+
+              const stablePosition = new THREE.Vector3(center.x + 100, center.y + 50, center.z + 600);
+              camera.position.copy(stablePosition);
+              camera.lookAt(center);
+              initialCameraPosition = stablePosition.clone();
+              initialCameraTarget = center.clone();
+
+              if (app.canvas) app.canvas.style.pointerEvents = 'none';
             } else {
               const scale = Math.max(size.x / width, size.y / height) * 1.2;
               camera.zoom = 1 / scale;
+              camera.updateProjectionMatrix();
+
               camera.position.set(center.x, center.y, center.z + 1000);
               camera.lookAt(center);
-              
-              // Set controls target for desktop
-              if (controls) {
-                controls.target.copy(center);
-              }
+
+              if (controls) controls.target.copy(center);
             }
-            
+
             camera.updateProjectionMatrix();
-            
-            // Final update for desktop controls only
-            if (controls) {
-              controls.update();
-            }
+            if (controls) controls.update();
           }, isMobile ? 200 : 100);
         })
         .catch(console.error);
@@ -181,9 +156,7 @@ export default function ServiceSpline() {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', onResize);
       splineAppRef.current?.dispose();
-      if (controls) {
-        controls.dispose();
-      }
+      if (controls) controls.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
@@ -209,12 +182,12 @@ export default function ServiceSpline() {
       )}
       <div
         ref={containerRef}
-        style={{ 
-          width: '100%', 
-          height: '100%', 
+        style={{
+          width: '100%',
+          height: '100%',
           minHeight: '200px',
-          position: 'relative', 
-          overflow: 'hidden', 
+          position: 'relative',
+          overflow: 'hidden',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y'
         }}
