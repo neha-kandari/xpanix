@@ -20,6 +20,7 @@ export default function ServiceSpline() {
       return mem <= 2 || cores <= 2;
     };
     const lowTier = isLowTier();
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -27,6 +28,7 @@ export default function ServiceSpline() {
     const scene = new THREE.Scene();
     scene.background = null;
 
+    // Mobile-optimized camera settings
     const camera = new THREE.OrthographicCamera(
       -width / 2,
       width / 2,
@@ -35,11 +37,27 @@ export default function ServiceSpline() {
       -10000,
       10000
     );
-    camera.position.set(980.99, 179.96, 196.84);
-    camera.quaternion.setFromEuler(new THREE.Euler(-0.64, 1.33, 0.63));
+    
+    // Different camera positions for mobile vs desktop
+    if (isMobile) {
+      camera.position.set(500, 200, 300);
+      camera.quaternion.setFromEuler(new THREE.Euler(-0.3, 0.8, 0.2));
+    } else {
+      camera.position.set(980.99, 179.96, 196.84);
+      camera.quaternion.setFromEuler(new THREE.Euler(-0.64, 1.33, 0.63));
+    }
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !lowTier, powerPreference: 'low-power' });
-    renderer.setPixelRatio(lowTier ? 1 : Math.min(window.devicePixelRatio, 1.5));
+    const renderer = new THREE.WebGLRenderer({ 
+      alpha: true, 
+      antialias: !lowTier && !isMobile, 
+      powerPreference: isMobile ? 'low-power' : 'high-performance',
+      stencil: false,
+      depth: true
+    });
+    
+    // Mobile-optimized pixel ratio
+    const pixelRatio = isMobile ? 1 : (lowTier ? 1 : Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -49,23 +67,43 @@ export default function ServiceSpline() {
     renderer.domElement.style.userSelect = 'none';
     container.appendChild(renderer.domElement);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = lowTier ? 0.03 : 0.08;
-    controls.enableZoom = false;
-    controls.enablePan = false;
-    controls.enableRotate = true;
-    controls.maxPolarAngle = Math.PI * 0.8;
-    controls.minPolarAngle = Math.PI * 0.2;
-    controls.maxAzimuthAngle = Math.PI / 6;
-    controls.minAzimuthAngle = -Math.PI / 6;
+    // Controls setup - disabled completely on mobile to prevent drift
+    let controls: OrbitControls | null = null;
+    if (!isMobile) {
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = lowTier ? 0.03 : 0.08;
+      controls.enableZoom = false;
+      controls.enablePan = false;
+      controls.enableRotate = true;
+      controls.maxPolarAngle = Math.PI * 0.8;
+      controls.minPolarAngle = Math.PI * 0.2;
+      controls.maxAzimuthAngle = Math.PI / 6;
+      controls.minAzimuthAngle = -Math.PI / 6;
+      controls.rotateSpeed = 0.5;
+    }
 
-    const animate = () => {
+    // Mobile-optimized animation loop with frame limiting
+    let lastFrameTime = 0;
+    const targetFPS = isMobile ? 30 : 60;
+    const frameInterval = 1000 / targetFPS;
+    
+    const animate = (currentTime: number) => {
       animationRef.current = requestAnimationFrame(animate);
-      controls.update();
+      
+      // Frame rate limiting for mobile
+      if (isMobile && currentTime - lastFrameTime < frameInterval) {
+        return;
+      }
+      lastFrameTime = currentTime;
+      
+      // Only update controls if they exist (desktop only)
+      if (controls) {
+        controls.update();
+      }
       renderer.render(scene, camera);
     };
-    animate();
+    animate(0);
 
     const onResize = () => {
       const w = container.clientWidth;
@@ -79,6 +117,10 @@ export default function ServiceSpline() {
     };
     window.addEventListener('resize', onResize);
 
+    // Store initial camera state for mobile stability
+    let initialCameraPosition: THREE.Vector3 | null = null;
+    let initialCameraTarget: THREE.Vector3 | null = null;
+
     const loadScene = () => {
       const app = new Application(renderer.domElement);
       splineAppRef.current = app;
@@ -90,14 +132,44 @@ export default function ServiceSpline() {
             const box = new THREE.Box3().setFromObject(scene);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
-            const scale = Math.max(size.x / width, size.y / height) * 1.2;
-            camera.zoom = 1 / scale;
-            camera.position.set(center.x, center.y, center.z + 1000);
-            camera.lookAt(center);
-            controls.target.copy(center);
+            
+            // Mobile-specific scaling and positioning
+            if (isMobile) {
+              const scale = Math.max(size.x / width, size.y / height) * 1.8;
+              camera.zoom = 1 / scale;
+              
+              // Set stable camera position for mobile
+              const targetPosition = new THREE.Vector3(center.x + 200, center.y + 100, center.z + 800);
+              camera.position.copy(targetPosition);
+              camera.lookAt(center.x, center.y, center.z);
+              
+              // Store stable positions to prevent drift
+              initialCameraPosition = targetPosition.clone();
+              initialCameraTarget = new THREE.Vector3(center.x, center.y, center.z);
+              
+              // Disable any Spline app controls on mobile
+              if (app.canvas) {
+                app.canvas.style.pointerEvents = 'none';
+              }
+            } else {
+              const scale = Math.max(size.x / width, size.y / height) * 1.2;
+              camera.zoom = 1 / scale;
+              camera.position.set(center.x, center.y, center.z + 1000);
+              camera.lookAt(center);
+              
+              // Set controls target for desktop
+              if (controls) {
+                controls.target.copy(center);
+              }
+            }
+            
             camera.updateProjectionMatrix();
-            controls.update();
-          }, 100);
+            
+            // Final update for desktop controls only
+            if (controls) {
+              controls.update();
+            }
+          }, isMobile ? 200 : 100);
         })
         .catch(console.error);
     };
@@ -109,6 +181,9 @@ export default function ServiceSpline() {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', onResize);
       splineAppRef.current?.dispose();
+      if (controls) {
+        controls.dispose();
+      }
       renderer.dispose();
       renderer.domElement.remove();
     };
@@ -126,7 +201,7 @@ export default function ServiceSpline() {
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: 'sans-serif',
-          fontSize: '1rem',
+          fontSize: '0.9rem',
           zIndex: 99
         }}>
           Loading…
@@ -134,7 +209,15 @@ export default function ServiceSpline() {
       )}
       <div
         ref={containerRef}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', WebkitOverflowScrolling: 'touch' }}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          minHeight: '200px',
+          position: 'relative', 
+          overflow: 'hidden', 
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y'
+        }}
       />
     </>
   );
