@@ -22,7 +22,7 @@ const projects = [
     image: "/RajasthanDistributore.jpg",
     category: "Web Development",
     technologies: ["Next.js", "Tailwind", "Vercel", "responsive design"],
-    liveUrl: "https://rajasthan-distributors.vercel.app/",
+    liveUrl: "https://www.rajasthanautodistributors.com/",
     featured: true,
   },
   {
